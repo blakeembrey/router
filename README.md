@@ -295,6 +295,68 @@ curl http://127.0.0.1:8080/such_path
 > such_path
 ```
 
+## Implementing Your Own Router
+
+Implementing a custom router on top of this logic is as easy as requiring `router/engine`. The engine implements all the runtime logic for the router and can be used to create different path matching semantics. To implement an "exact" path module, we can:
+
+```js
+var Engine  = require('router/engine')
+var methods = require('methods')
+
+var slice = Array.prototype.slice
+
+function toFunction (route, options) {
+  if (!options.end) {
+    return function (path) {
+      var matches = path.substr(0, route.length) === route
+
+      return matches ? { path: path } : false
+    }
+  }
+
+  return function (path) {
+    return path === route ? { path: path } : false
+  }
+}
+
+function ExactRouter (options) {
+  Engine.call(this, options)
+}
+
+ExactRouter.prototype = Object.create(Engine.prototype)
+
+ExactRouter.prototype.use = function () {
+  var offset = 0
+  var path = '/'
+
+  if (typeof arguments[0] !== 'function') {
+    path = arguments[0]
+    offset = 1
+  }
+
+  var match = toFunction(path, { end: false })
+  var callbacks = slice.call(arguments, offset)
+
+  return Engine.prototype.use.call(this, path, match, callbacks)
+}
+
+ExactRouter.prototype.route = function (path) {
+  var match = toFunction(path, { end: true })
+
+  return Engine.prototype.route.call(this, path, match)
+}
+
+methods.forEach(function (method) {
+  ExactRouter.prototype[method] = function (path, handler) {
+    var route = this.route(path)
+    route[method].apply(route, slice.call(arguments, 1))
+    return this
+  }
+})
+```
+
+Notice that the matching function and the path must be passed into both the `route` and `use` engine methods. This is for debugging purposes, so `path` should be a human-readable path name. `Engine#use` also accepts an array of handlers to immediately include. The match function must return an object of `{ path: string, params: object }` or `false` if it didn't match.
+
 ## License
 
 [MIT](LICENSE)
