@@ -122,7 +122,7 @@ describe('Engine', function () {
 
           var body = method !== 'head'
             ? 'hello, world'
-            : ''
+            : undefined
 
           request(server)
           [method]('/')
@@ -139,7 +139,7 @@ describe('Engine', function () {
 
       var body = method !== 'head'
         ? 'hello, world'
-        : ''
+        : undefined
 
       describe('.' + method + '(path, ...fn)', function () {
         it('should respond to a ' + method.toUpperCase() + ' request', function (done) {
